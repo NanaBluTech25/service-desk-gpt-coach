@@ -1,0 +1,39 @@
+name: 🧪 Prompt QA Check
+
+on:
+  pull_request:
+    paths:
+      - 'prompts/**'
+      - 'docs/**'
+
+jobs:
+  run-qa-check:
+    runs-on: ubuntu-latest
+    name: Check GPT Prompts Against QA Rubric
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install PyYAML (for YAML support)
+        run: pip install pyyaml
+
+      - name: 🔍 Run QA check on all modified files
+        run: |
+          echo "Modified files:"
+          git fetch origin main
+          git diff --name-only origin/main | grep -E '^(prompts|docs)/.*\.md$' > files.txt || true
+          cat files.txt
+
+          while IFS= read -r file; do
+            echo "-----"
+            echo "Checking: $file"
+            # Extract plain text from markdown (basic)
+            content=$(cat "$file" | tr '\n' ' ' | tr -s ' ')
+            python qa_check.py yaml "$content"
+          done < files.txt
